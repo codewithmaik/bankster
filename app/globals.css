@@ -1,5 +1,11 @@
+@import "tailwindcss";
+
 /* =========================================================
    Bankster — design tokens
+   The component layer below is a hand-written design system.
+   Tailwind utilities are available on top of it for new work;
+   the @theme block exposes the brand tokens as utilities
+   (bg-brand, text-ink, rounded-r-lg, …).
    ========================================================= */
 :root {
     /* Brand */
@@ -46,6 +52,20 @@
     --dur: .22s;
 }
 
+@theme inline {
+    --color-brand: var(--brand);
+    --color-brand-strong: var(--brand-strong);
+    --color-brand-soft: var(--brand-soft);
+    --color-brand-tint: var(--brand-tint);
+    --color-ink: var(--ink);
+    --color-ink-soft: var(--ink-soft);
+    --color-ink-faint: var(--ink-faint);
+    --color-bg-subtle: var(--bg-subtle);
+    --color-bg-warm: var(--bg-warm);
+    --color-surface-dark: var(--surface-dark);
+    --font-sans: var(--font-kumbh-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
 /* =========================================================
    Reset / base
    ========================================================= */
@@ -64,7 +84,7 @@ html {
 }
 
 body {
-    font-family: "Kumbh Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-kumbh-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--ink);
     background: var(--bg);
     line-height: 1.6;
@@ -758,7 +778,7 @@ p {
     background: #ff5a1f;
 }
 
-#small-desc {
+.small-desc {
     font-size: .92rem;
     color: var(--ink-faint);
     margin-top: .9rem;
@@ -903,6 +923,12 @@ p {
     left: 0;
     top: .2rem;
     color: var(--brand-strong);
+}
+
+.form-status {
+    margin-top: 1rem;
+    color: var(--brand-strong);
+    font-weight: 600;
 }
 
 /* =========================================================

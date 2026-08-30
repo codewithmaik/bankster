@@ -2,38 +2,55 @@
 
 Working notes for this project. Last updated: 2026-08-30.
 
-Bankster is a **static, no-build marketing website** for a fictional digital bank,
-built purely as a front-end work example / portfolio piece. No real services,
-accounts or payments exist and no data is processed (see `impressum.html`).
+Bankster is a **marketing website** for a fictional digital bank, built purely as
+a front-end work example / portfolio piece. No real services, accounts or
+payments exist and no data is processed (see `/impressum`).
+
+Since 2026-08-30 the site is a **Next.js 16 (App Router) + TypeScript + Tailwind
+CSS v4** app (migrated from a plain static HTML/CSS/JS site — see the migration
+session log below).
 
 ---
 
 ## Stack & structure
 
-- Plain HTML + CSS + vanilla JS. No framework, no bundler, no `package.json`.
-- External resources via CDN: Font Awesome 6.5.1, Google Font "Kumbh Sans".
-- One shared `styles.css` (token-based design system) and one `app.js` for all pages.
+- **Next.js 16** App Router, **React 19**, **TypeScript** (strict), **Tailwind CSS v4**.
+- Fully static output — every route is prerendered (`○ (Static)`); no server code.
+- External resources via CDN: Font Awesome 6.5.1 (`<link>` in the root layout).
+- Google Font "Kumbh Sans" via `next/font` (self-hosted, `--font-kumbh-sans`).
+- The hand-written design system lives in `app/globals.css` (design tokens +
+  every component class, ported verbatim from the old `styles.css`). Tailwind
+  utilities sit on top for new work; `@theme inline` exposes the brand tokens
+  (`bg-brand`, `text-ink`, …).
 
-| File | Purpose |
+| Path | Purpose |
 | --- | --- |
-| `index.html` | Landing page: hero, partner marquee, features, pricing + **disclaimer modal** |
-| `services.html` | Services overview (page header + 6 cards + footer) |
-| `pricing.html` | Pricing plans, monthly/yearly toggle |
-| `signup.html` | Demo sign-up form (client-side only, no backend) |
-| `impressum.html` | Legal notice (§ 5 DDG), `noindex` |
-| `styles.css` | CSS custom properties (tokens) + every component style |
-| `app.js` | Mobile nav, navbar scroll state, active-link, logo marquee, pricing toggle, scroll reveal, footer year, disclaimer modal, signup form |
-| `images/pic01.svg` | Hero illustration (only asset) |
+| `app/layout.tsx` | Root layout: `<html>`, font, FA `<link>`, `<Navbar>` + `<Footer>`, metadata + title template |
+| `app/page.tsx` | Landing page: hero, partner marquee, features, pricing + disclaimer modal |
+| `app/services/page.tsx` | Services overview (page header + 6 cards) |
+| `app/pricing/page.tsx` | Pricing plans, monthly/yearly toggle |
+| `app/signup/page.tsx` | Demo sign-up page (client-side form only, no backend) |
+| `app/impressum/page.tsx` | Legal notice (§ 5 DDG), `robots: noindex` |
+| `app/globals.css` | Tailwind import + design tokens + all component styles |
+| `components/Navbar.tsx` | `"use client"` — mobile nav, scroll state, active link (`usePathname`) |
+| `components/Footer.tsx` | Server component; shared footer + social links |
+| `components/DisclaimerModal.tsx` | `"use client"` — portfolio disclaimer, focus trap, Esc/backdrop close |
+| `components/PricingPlans.tsx` | `"use client"` — monthly/yearly toggle + plan cards (used on `/` and `/pricing`) |
+| `components/SignupForm.tsx` | `"use client"` — demo form, `preventDefault`, status message |
+| `components/Reveal.tsx` | `"use client"` — `IntersectionObserver` scroll-reveal wrapper |
+| `components/LogoMarquee.tsx` | Server component; duplicated track for a seamless CSS loop |
+| `public/images/pic01.svg` | Hero illustration (only asset) |
+| `next.config.ts` | `.html` → clean-URL redirects (308), `turbopack.root` pin |
 
-### Local preview
+### Local development
 
 ```bash
-python3 -m http.server 8000
-# open http://localhost:8000
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # production build
+npm run start    # serve the production build
+npm run typecheck
 ```
-
-> Note: browsers cache `styles.css` / `app.js` aggressively on localhost.
-> When testing changes, use a fresh port or a hard reload.
 
 ---
 
@@ -153,16 +170,84 @@ Repo: https://github.com/codewithmaik/bankster
 
 ---
 
+## Session log — 2026-08-30 (part 2): migration to Next.js / TypeScript / Tailwind
+
+Rebuilt the static site as a **Next.js 16 App Router** app with **TypeScript**
+(strict) and **Tailwind CSS v4**, keeping the design 1:1.
+
+### Approach
+
+- Ported `styles.css` **verbatim** into `app/globals.css` under
+  `@import "tailwindcss";`. The design system is class-based and token-driven, so
+  rewriting it into utilities would have been high-risk churn for no visual gain.
+  Tailwind is fully wired and available for new work; `@theme inline` re-exposes
+  the brand tokens as utilities.
+- Each `.html` page → an App Router route; shared chrome (`Navbar`, `Footer`)
+  moved into `app/layout.tsx`, killing the duplicated footer markup.
+- `app.js` IIFEs → small client components:
+  - `Navbar` — `useState`/`useEffect` for the mobile menu + scroll state;
+    active link via `usePathname` (replaces the old pathname string matching).
+  - `DisclaimerModal` — same focus trap / Esc / backdrop behaviour, now
+    conditionally rendered; still shows on every load, no persistence.
+  - `PricingPlans` — toggle is now React state; plan data is a typed array
+    rendered once and shared by `/` and `/pricing` (was duplicated markup).
+  - `SignupForm` — `onSubmit` + `preventDefault`, status in state.
+  - `Reveal` — `IntersectionObserver` wrapper component; SSR-safe (renders
+    hidden, reveals on mount), falls back to visible without IO / under
+    reduced-motion.
+  - `LogoMarquee` — renders the track twice in JSX instead of cloning via JS.
+- Fonts: **Kumbh Sans via `next/font`** (self-hosted, `--font-kumbh-sans`),
+  so no more render-blocking Google Fonts request. Font Awesome stays on CDN
+  via a `<link>` in the root layout.
+- Icons in content kept as Font Awesome `<i className="fa-solid …">`.
+
+### Config / files
+
+- `package.json` — `next`, `react`, `react-dom` + dev deps (`typescript`,
+  `@types/*`, `tailwindcss`, `@tailwindcss/postcss`). Scripts: `dev`, `build`,
+  `start`, `typecheck`.
+- `next.config.ts` — `reactStrictMode`, `turbopack.root` pinned (there is an
+  unrelated `package-lock.json` in a parent dir), and **308 redirects** from the
+  old URLs (`/index.html` → `/`, `/services.html` → `/services`, …) so existing
+  links / bookmarks / search results keep working.
+- `tsconfig.json`, `postcss.config.mjs`, `next-env.d.ts` — standard.
+- `.gitignore` — replaced with the Next.js set (`/.next`, `/out`,
+  `*.tsbuildinfo`, kept `.vercel` / `.env*` / `.DS_Store`).
+- `images/pic01.svg` → `public/images/pic01.svg` (`git mv`).
+- Deleted: `index.html`, `services.html`, `pricing.html`, `signup.html`,
+  `impressum.html`, `styles.css`, `app.js`.
+
+### Verification
+
+- `npm run typecheck` — clean.
+- `npm run build` — clean; all 6 routes (`/`, `/services`, `/pricing`,
+  `/signup`, `/impressum`, `/_not-found`) prerendered as static content.
+- `npm run start` smoke test — every route `200`, `/services.html` → `308`
+  redirect, compiled CSS bundle contains the full design system.
+- Visual check in Chrome was skipped — the browser extension disconnected
+  mid-session. Worth an eyeball pass after the preview deploy.
+
+### Vercel
+
+- Framework preset changes from "Other" (static) to **Next.js** — Vercel should
+  auto-detect this on the next build. No env vars needed. The GitHub connection
+  and `bankster-bank.vercel.app` alias are unaffected.
+
+---
+
 ## How to deploy again
 
-- Push to `main` on GitHub → Vercel builds & promotes to production automatically.
+- Push to `main` on GitHub → Vercel builds & promotes to production automatically
+  (Vercel now runs `next build`; framework preset auto-detected as Next.js).
 - Or manually from the project dir: `vercel deploy --prod --scope codewithmaik`.
 
 ## Known gaps / possible next steps
 
 - Social links (`instagram.com`, `facebook.com`, …) are placeholders.
 - `mailto:hello@bankster.example` in the footer is a placeholder address.
-- `services.html` / `pricing.html` share duplicated footer markup with `index.html`
-  (fine for a static site; would be templated in a build setup).
-- No favicon / OG image / sitemap yet.
+- No favicon / OG image / sitemap yet (`app/icon`, `app/opengraph-image`,
+  `app/sitemap.ts` would be the Next-native way).
 - Impressum contact is intentionally the developer site, not an email address.
+- Visual regression pass against the old static site still pending (see above).
+- Opportunity: migrate component styles from `globals.css` to Tailwind utilities
+  incrementally now that the toolchain is in place.
