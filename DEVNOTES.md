@@ -227,11 +227,27 @@ Rebuilt the static site as a **Next.js 16 App Router** app with **TypeScript**
 - Visual check in Chrome was skipped — the browser extension disconnected
   mid-session. Worth an eyeball pass after the preview deploy.
 
-### Vercel
+### Vercel (deployed 2026-09-01)
 
-- Framework preset changes from "Other" (static) to **Next.js** — Vercel should
-  auto-detect this on the next build. No env vars needed. The GitHub connection
-  and `bankster-bank.vercel.app` alias are unaffected.
+- Merged `nextjs-migration` → `main` (fast-forward) and pushed. The GitHub
+  integration auto-built a production deploy.
+- **Gotcha:** the project was created with Framework Preset **"Other"** and
+  Output Directory `public/`. The first deploy *built* Next.js fine (Vercel
+  detects `next` in `package.json`) but then served the near-empty `public/`
+  folder → every route 404'd on `bankster-bank.vercel.app`.
+- Fix: `vercel project update bankster --framework nextjs --auto-detect
+  build-command --auto-detect output-directory --auto-detect install-command
+  --yes`, plus a committed `vercel.json` (`{ "framework": "nextjs" }`) to codify
+  it. Re-deploy → all routes 200.
+- `bankster-bank.vercel.app` (the public live URL) is **not** behind Deployment
+  Protection and serves the site. The auto-generated `bankster-codewithmaik.vercel.app`
+  / `bankster-git-main-*` domains *are* protected (302 → Vercel SSO) — expected,
+  leave as-is; the public domain is what matters.
+- No env vars needed.
+
+**Verified live:** `/`, `/services`, `/pricing`, `/signup`, `/impressum` all
+200; `*.html` → 308 clean-URL redirect; `_next` CSS/JS chunks + hero SVG 200;
+Impressum `robots: noindex`.
 
 ---
 
